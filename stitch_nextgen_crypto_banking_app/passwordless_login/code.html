@@ -1,0 +1,107 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary-container": "#d0d9ee", "on-secondary-fixed": "#00210b", "on-secondary-fixed-variant": "#005226", "surface-container-highest": "#30353d", "on-surface": "#dee2ed", "on-tertiary": "#283141", "surface": "#0f141b", "error": "#ffb4ab", "inverse-surface": "#dee2ed", "primary-fixed-dim": "#00dbe9", "primary-fixed": "#7df4ff", "on-secondary-container": "#00622e", "on-primary-fixed-variant": "#004f54", "tertiary-fixed-dim": "#bec7db", "surface-container-lowest": "#090e15", "surface-variant": "#30353d", "on-primary-fixed": "#002022", "on-background": "#dee2ed", "surface-bright": "#353942", "inverse-primary": "#006970", "primary-container": "#00f0ff", "on-tertiary-fixed": "#131c2b", "on-primary": "#00363a", "outline": "#849495", "on-error": "#690005", "on-secondary": "#003918", "secondary-fixed-dim": "#00e475", "on-tertiary-container": "#565f71", "secondary-fixed": "#62ff96", "surface-container": "#1b2027", "on-tertiary-fixed-variant": "#3e4758", "surface-container-high": "#252a32", "tertiary": "#f3f5ff", "on-primary-container": "#006970", "tertiary-fixed": "#dae2f8", "background": "#0f141b", "on-error-container": "#ffdad6", "secondary": "#7dffa2", "secondary-container": "#05e777", "on-surface-variant": "#b9cacb", "primary": "#dbfcff", "surface-container-low": "#171c23", "surface-tint": "#00dbe9", "inverse-on-surface": "#2c3139", "outline-variant": "#3b494b", "error-container": "#93000a", "surface-dim": "#0f141b" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "container-padding": "24px", "unit": "4px", "gutter": "16px", "stack-md": "16px", "stack-sm": "8px", "stack-lg": "32px" }, "fontFamily": { "body-md": ["Inter"], "headline-md": ["Inter"], "headline-lg-mobile": ["Inter"], "body-lg": ["Inter"], "mono-data": ["Geist"], "headline-lg": ["Inter"], "display-lg": ["Inter"], "label-md": ["Geist"], "label-sm": ["Geist"] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface font-body-md overflow-x-hidden min-h-screen pt-safe pb-safe"><main class="relative w-full"><div class="flex flex-col w-full h-full min-h-[618px] items-center justify-center px-container-padding relative">
+<!-- Subtle Background Glow -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-primary/10 rounded-full blur-[80px]"></div>
+</div>
+<!-- Main Content Container -->
+<div class="flex flex-col items-center z-10 w-full max-w-sm mx-auto text-center space-y-stack-lg">
+<!-- Title Area -->
+<div class="space-y-stack-sm">
+<h1 class="headline-lg text-on-surface">Είσοδος σε 1 δευτερόλεπτο</h1>
+<p class="body-md text-on-surface-variant max-w-[280px] mx-auto">
+        Χρησιμοποιήστε το Passkey για ασφαλή πρόσβαση χωρίς κωδικό
+      </p>
+</div>
+<!-- Interactive Biometric Area -->
+<div class="relative group cursor-pointer w-32 h-32 flex items-center justify-center my-stack-lg" id="biometric-trigger">
+<!-- Scanning Ring Animation (CSS only for initial state) -->
+<div class="absolute inset-0 rounded-full border border-primary/30 animate-[spin_4s_linear_infinite]" id="scan-ring-1"></div>
+<div class="absolute inset-0 rounded-full border-t-2 border-r-2 border-primary animate-[spin_3s_ease-in-out_infinite]" id="scan-ring-2"></div>
+<div class="absolute inset-2 rounded-full border border-primary/20 animate-[spin_5s_linear_infinite_reverse]"></div>
+<!-- Biometric Icon (Fingerprint) -->
+<div class="relative z-10 w-20 h-20 bg-surface-container-highest rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 group-active:scale-95" id="icon-container">
+<span class="material-symbols-outlined text-[40px] text-primary transition-all duration-300" id="biometric-icon" style="font-variation-settings: 'wght' 300;">
+          fingerprint
+        </span>
+</div>
+<!-- Success Overlay (Hidden initially) -->
+<div class="absolute inset-0 flex items-center justify-center opacity-0 scale-50 transition-all duration-500 ease-out z-20 pointer-events-none" id="success-overlay">
+<div class="w-24 h-24 bg-secondary/20 rounded-full flex items-center justify-center backdrop-blur-md border border-secondary/30 shadow-[0_0_20px_rgba(125,255,162,0.3)]">
+<span class="material-symbols-outlined text-[48px] text-secondary">
+              check_circle
+            </span>
+</div>
+</div>
+</div>
+<!-- Secondary Options -->
+<div class="flex flex-col w-full space-y-stack-sm pt-stack-md">
+<button class="w-full h-12 bg-surface-container-high hover:bg-surface-container-highest active:bg-surface-container-highest text-on-surface rounded-lg label-md transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">password</span>
+        Είσοδος με κωδικό
+      </button>
+<button class="w-full h-12 text-primary hover:bg-primary/10 active:bg-primary/20 rounded-lg label-md transition-colors">
+        Χρειάζεστε βοήθεια;
+      </button>
+</div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const trigger = document.getElementById('biometric-trigger');
+      const icon = document.getElementById('biometric-icon');
+      const container = document.getElementById('icon-container');
+      const rings = [document.getElementById('scan-ring-1'), document.getElementById('scan-ring-2')];
+      const successOverlay = document.getElementById('success-overlay');
+      let isScanning = false;
+
+      trigger.addEventListener('click', () => {
+        if (isScanning) return;
+        isScanning = true;
+
+        // Simulate Scanning State
+        icon.style.opacity = '0.5';
+        icon.classList.add('animate-pulse');
+        
+        rings.forEach(ring => {
+            ring.classList.add('border-secondary');
+            ring.classList.remove('border-primary');
+            ring.style.animationDuration = '1s';
+        });
+
+        // Simulate Success after 1.5s
+        setTimeout(() => {
+          // Hide Rings & Icon
+          rings.forEach(ring => {
+              ring.style.opacity = '0';
+              ring.style.transform = 'scale(1.2)';
+              ring.style.transition = 'all 0.5s ease-out';
+          });
+          
+          icon.style.opacity = '0';
+          icon.classList.remove('animate-pulse');
+          
+          container.classList.add('bg-secondary/10');
+          container.classList.remove('bg-surface-container-highest');
+          container.style.boxShadow = '0 0 30px rgba(125, 255, 162, 0.4)';
+
+          // Show Success Overlay
+          successOverlay.style.opacity = '1';
+          successOverlay.style.transform = 'scale(1)';
+
+          // Reset (Optional, for demo purposes)
+          /*
+          setTimeout(() => {
+            isScanning = false;
+            // Reset logic here...
+          }, 3000);
+          */
+        }, 1500);
+      });
+    });
+  </script>
+</div></main></body></html>

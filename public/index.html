@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="el" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>VaultPay | Revolut-Style AI KYC Onboarding & Azure Security</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Geist:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0..1&display=swap" rel="stylesheet"/>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#0f141b",
+            "surface-dim": "#0f141b",
+            "surface-bright": "#353942",
+            "surface-container-lowest": "#090e15",
+            "surface-container-low": "#171c23",
+            "surface-container": "#1b2027",
+            "surface-container-high": "#252a32",
+            "surface-container-highest": "#30353d",
+            "on-surface": "#dee2ed",
+            "on-surface-variant": "#b9cacb",
+            "primary": "#00f0ff",
+            "primary-fixed": "#7df4ff",
+            "primary-fixed-dim": "#00dbe9",
+            "on-primary": "#00363a",
+            "on-primary-container": "#006970",
+            "secondary": "#7dffa2",
+            "secondary-container": "#05e777",
+            "on-secondary": "#003918",
+            "on-secondary-container": "#00622e",
+            "tertiary": "#f3f5ff",
+            "tertiary-container": "#d0d9ee",
+            "error": "#ffb4ab",
+            "error-container": "#93000a",
+            "outline": "#849495",
+            "outline-variant": "#3b494b"
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Geist', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0f141b;
+      color: #dee2ed;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .glass-header {
+      background: rgba(15, 20, 27, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .glass-card {
+      background: rgba(27, 32, 39, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-glow {
+      position: relative;
+    }
+    .glass-card-glow::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), transparent 60%, rgba(125, 255, 162, 0.3));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .scanner-beam {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+      box-shadow: 0 0 15px #00f0ff;
+      animation: scanBeam 2.5s ease-in-out infinite alternate;
+    }
+    @keyframes scanBeam {
+      0% { top: 10%; }
+      100% { top: 85%; }
+    }
+    .wave-bar {
+      width: 4px;
+      border-radius: 999px;
+      background-color: #00f0ff;
+      animation: wave 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes wave {
+      0% { height: 8px; opacity: 0.4; }
+      100% { height: 36px; opacity: 1; }
+    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen pb-20">
+
+  <!-- TOP HEADER -->
+  <header class="fixed top-0 w-full z-50 glass-header px-4 lg:px-8 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+      <div class="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center border border-primary/30 shadow-[0_0_12px_rgba(0,240,255,0.2)]">
+        <span class="material-symbols-outlined text-primary text-2xl">account_balance_wallet</span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-lg tracking-tight text-on-surface">VaultPay</span>
+          <span class="text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">Revolut AI KYC</span>
+        </div>
+        <p class="text-xs text-on-surface-variant hidden sm:block">AI Biometrics • Liveness Detection • Entra ID & Key Vault Passkey</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs Desktop -->
+    <nav class="hidden md:flex items-center gap-1 bg-surface-container-low p-1.5 rounded-full border border-white/5 text-xs font-medium">
+      <button onclick="switchTab('welcome')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="welcome">1. Launch</button>
+      <button onclick="switchTab('kyc')" class="nav-btn px-3 py-1.5 rounded-full transition-all active-tab bg-primary text-on-primary font-semibold" data-target="kyc">2. AI KYC</button>
+      <button onclick="switchTab('login')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="login">3. Passkey Login</button>
+      <button onclick="switchTab('dashboard')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="dashboard">4. Hub / Dashboard</button>
+      <button onclick="switchTab('transfers')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="transfers">5. Transfers & FX</button>
+      <button onclick="switchTab('cards')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="cards">6. Cards</button>
+      <button onclick="switchTab('admin')" class="nav-btn px-3 py-1.5 rounded-full transition-all hover:text-primary" data-target="admin">7. Security Portal</button>
+      <button onclick="switchTab('azure')" class="nav-btn px-3 py-1.5 rounded-full transition-all text-primary bg-primary/10 border border-primary/30 hover:bg-primary/20 font-bold" data-target="azure">
+        <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">picture_as_pdf</span> Tech Report PDF</span>
+      </button>
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a href="/api/download-report" target="_blank" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-xs font-medium hover:bg-secondary/20 transition-all">
+        <span class="material-symbols-outlined text-[16px]">download</span>
+        PDF Specs
+      </a>
+      <div class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center border border-white/10 text-primary cursor-pointer" onclick="switchTab('admin')">
+        <span class="material-symbols-outlined text-xl">admin_panel_settings</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex-grow">
+
+    <!-- 1. WELCOME & QUICK LAUNCH PAGE -->
+    <section id="view-welcome" class="view-section pt-6">
+      <div class="max-w-2xl mx-auto text-center space-y-8 py-8 relative">
+        <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="w-24 h-24 rounded-2xl bg-surface-container-high shadow-2xl mx-auto flex items-center justify-center border border-primary/30 relative glass-card-glow">
+          <span class="material-symbols-outlined text-primary text-5xl drop-shadow-[0_0_15px_rgba(0,240,255,0.6)]">account_balance_wallet</span>
+        </div>
+        
+        <div class="space-y-3">
+          <h1 class="text-4xl font-extrabold tracking-tight text-on-surface sm:text-5xl">VaultPay</h1>
+          <p class="text-lg text-on-surface-variant font-medium">Revolut-Style Digital Banking Platform</p>
+          <p class="text-xs text-outline max-w-md mx-auto">AI KYC Onboarding • Passwordless FIDO2 Passkeys • Entra ID Real-time Conditional Access • Key Vault Card Encryption • Hybrid Cloud</p>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+          <button onclick="switchTab('kyc')" class="w-full py-4 px-6 rounded-xl bg-primary text-on-primary font-bold text-sm transition-transform active:scale-95 shadow-[0_0_20px_rgba(0,240,255,0.3)]">
+            🚀 ⚡ Εγγραφή & AI KYC σε 2 λεπτά
+          </button>
+          <button onclick="switchTab('login')" class="w-full py-4 px-6 rounded-xl bg-surface-container-high border border-primary/30 text-primary font-bold text-sm hover:bg-primary/10 transition-transform active:scale-95">
+            🔑 Είσοδος με FIDO2 Passkey
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. REVOLUT-STYLE 2-MINUTE AI KYC ONBOARDING PAGE (FULLY FUNCTIONAL & STUNNING) -->
+    <section id="view-kyc" class="view-section active pt-4">
+      <div class="max-w-2xl mx-auto space-y-6">
+        
+        <!-- Header Banner -->
+        <div class="text-center space-y-2 relative">
+          <div class="absolute -top-12 left-1/2 -translate-x-1/2 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary font-mono text-xs font-bold">
+            <span class="w-2 h-2 rounded-full bg-primary animate-ping"></span> Revolut-Style 2-Minute Onboarding
+          </div>
+          <h2 class="text-3xl font-extrabold text-on-surface tracking-tight">Ψηφιακό Onboarding & AI KYC</h2>
+          <p class="text-xs text-on-surface-variant max-w-lg mx-auto">
+            Άμεση εγγραφή από το κινητό χωρίς γραφειοκρατία με Azure AI Biometrics, Machine Learning Liveness Detection & Microsoft Entra ID FIDO2 Passkeys.
+          </p>
+        </div>
+
+        <!-- PROGRESS STEPPER -->
+        <div class="glass-card p-4 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-on-surface-variant font-medium">Πρόοδος Ταυτοποίησης:</span>
+            <span class="text-primary font-bold" id="step-progress-text">Βήμα 1 από 3: Σάρωση Εγγράφου</span>
+          </div>
+
+          <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-primary via-secondary to-primary-fixed transition-all duration-500 rounded-full" id="step-progress-bar" style="width: 33.33%;"></div>
+          </div>
+
+          <!-- Step Indicators -->
+          <div class="grid grid-cols-3 gap-2 text-center pt-2">
+            <button onclick="goToKycStep(1)" class="p-2 rounded-xl bg-primary/20 text-primary border border-primary/40 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5" id="step-tab-1">
+              <span class="material-symbols-outlined text-base">badge</span> 1. Έγγραφο ID
+            </button>
+            <button onclick="goToKycStep(2)" class="p-2 rounded-xl bg-surface-container text-on-surface-variant font-mono text-xs font-medium transition-all flex items-center justify-center gap-1.5" id="step-tab-2">
+              <span class="material-symbols-outlined text-base">face_retouching_natural</span> 2. AI Liveness
+            </button>
+            <button onclick="goToKycStep(3)" class="p-2 rounded-xl bg-surface-container text-on-surface-variant font-mono text-xs font-medium transition-all flex items-center justify-center gap-1.5" id="step-tab-3">
+              <span class="material-symbols-outlined text-base">vpn_key</span> 3. Entra Passkey
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGE 1: DOCUMENT SCANNER (AZURE AI DOCUMENT INTELLIGENCE) -->
+        <div id="kyc-stage-1" class="glass-card p-6 rounded-2xl space-y-6 glass-card-glow">
+          <div class="flex items-center justify-between border-b border-white/5 pb-4">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-2xl">document_scanner</span>
+              <div>
+                <h3 class="font-bold text-lg text-on-surface">1. Σάρωση Εγγράφου Ταυτότητας (OCR)</h3>
+                <p class="text-xs text-on-surface-variant">Azure AI Document Intelligence & Automated Feature Extraction</p>
+              </div>
+            </div>
+            <span class="text-xs font-mono px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/20">OCR Live Model</span>
+          </div>
+
+          <!-- Document Viewfinder Simulation -->
+          <div class="relative w-full h-56 rounded-2xl bg-surface-container-lowest border-2 border-dashed border-primary/40 flex flex-col items-center justify-center overflow-hidden group">
+            <div class="scanner-beam" id="scan-beam"></div>
+
+            <!-- ID Card Mock Outline -->
+            <div class="w-72 h-44 rounded-xl border-2 border-primary/60 bg-surface-container/60 p-4 flex flex-col justify-between relative shadow-2xl backdrop-blur-md">
+              <div class="flex justify-between items-start">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold text-xs">GR</div>
+                  <div>
+                    <span class="text-[10px] font-mono font-bold text-on-surface block uppercase">Ελληνική Δημοκρατία</span>
+                    <span class="text-[9px] font-mono text-on-surface-variant block">NATIONAL IDENTITY CARD</span>
+                  </div>
+                </div>
+                <span class="material-symbols-outlined text-primary/70 text-xl">credit_card</span>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-14 rounded bg-surface-container-highest border border-primary/30 flex items-center justify-center text-primary">
+                  <span class="material-symbols-outlined text-2xl">person</span>
+                </div>
+                <div class="font-mono text-[10px] space-y-0.5 text-on-surface">
+                  <p>ΟΝΟΜΑ: <strong class="text-primary" id="ocr-name">MARIA KOTSIRA</strong></p>
+                  <p>ΑΡ. ΤΑΥΤΟΤΗΤΑΣ: <strong class="text-primary" id="ocr-id">AO 9028341</strong></p>
+                  <p>ΗΜΕΡ. ΓΕΝΝΗΣΗΣ: <strong>14/05/1996</strong></p>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-end text-[8px] font-mono text-on-surface-variant">
+                <span>ISSUED: 10/2022</span>
+                <span class="text-secondary font-bold">AZURE AI VERIFIED ✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- OCR Live Extracted Details -->
+          <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+            <div class="p-3 rounded-xl bg-surface-container border border-white/5 space-y-1">
+              <span class="text-[10px] text-on-surface-variant uppercase">Ονοματεπώνυμο:</span>
+              <p class="font-bold text-on-surface">Μαρία Κοτσίρα</p>
+            </div>
+            <div class="p-3 rounded-xl bg-surface-container border border-white/5 space-y-1">
+              <span class="text-[10px] text-on-surface-variant uppercase">Αριθμός Εγγράφου:</span>
+              <p class="font-bold text-primary">AO 9028341</p>
+            </div>
+          </div>
+
+          <button onclick="completeKycStage1()" class="w-full py-3.5 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <span>Επιβεβαίωση Εγγράφου & Συνέχεια στο AI Liveness Test</span>
+            <span class="material-symbols-outlined text-base">arrow_forward</span>
+          </button>
+        </div>
+
+        <!-- STAGE 2: AI BIOMETRIC LIVENESS DETECTION (FACE & VOICE) -->
+        <div id="kyc-stage-2" class="glass-card p-6 rounded-2xl space-y-6 glass-card-glow hidden">
+          <div class="flex items-center justify-between border-b border-white/5 pb-4">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-2xl">face_retouching_natural</span>
+              <div>
+                <h3 class="font-bold text-lg text-on-surface">2. Ανάλυση Βιομετρικών Χαρακτηριστικών (Liveness Detection)</h3>
+                <p class="text-xs text-on-surface-variant">Azure AI Machine Learning - Πρόσωπο & Φωνή (Anti-Deepfake)</p>
+              </div>
+            </div>
+            <span class="text-xs font-mono px-2.5 py-1 rounded bg-secondary/10 text-secondary border border-secondary/30">AI Liveness Model</span>
+          </div>
+
+          <!-- Face Scanner Frame & Voice Visualizer -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+            
+            <!-- Face Mesh Scanner Viewport -->
+            <div class="relative w-48 h-48 mx-auto rounded-full bg-surface-container-lowest border-4 border-primary/50 flex items-center justify-center shadow-[0_0_30px_rgba(0,240,255,0.2)] overflow-hidden">
+              <span class="material-symbols-outlined text-7xl text-primary animate-pulse" id="liveness-face-icon">face</span>
+              
+              <!-- Mesh overlay rings -->
+              <div class="absolute inset-2 rounded-full border border-primary/30 animate-[spin_6s_linear_infinite]"></div>
+              <div class="absolute inset-4 rounded-full border-t-2 border-secondary animate-[spin_4s_ease-in-out_infinite_reverse]"></div>
+            </div>
+
+            <!-- Voice Frequency Analysis Wave -->
+            <div class="space-y-4 text-center sm:text-left">
+              <div class="p-3.5 rounded-xl bg-surface-container border border-white/5 space-y-2">
+                <span class="text-[10px] font-mono uppercase text-primary font-bold">Φωνητικό Liveness Prompt:</span>
+                <p class="text-xs font-semibold text-on-surface italic">"Διαβάστε φωναχτά: VaultPay Security Verification 9028"</p>
+                
+                <!-- Animated Audio Waves -->
+                <div class="flex items-center justify-center gap-1.5 h-10 pt-2" id="wave-container">
+                  <div class="wave-bar" style="animation-delay: 0.1s;"></div>
+                  <div class="wave-bar" style="animation-delay: 0.3s;"></div>
+                  <div class="wave-bar" style="animation-delay: 0.2s;"></div>
+                  <div class="wave-bar" style="animation-delay: 0.4s;"></div>
+                  <div class="wave-bar" style="animation-delay: 0.15s;"></div>
+                  <div class="wave-bar" style="animation-delay: 0.35s;"></div>
+                </div>
+              </div>
+
+              <!-- AI Confidence Scores -->
+              <div class="space-y-2 font-mono text-xs">
+                <div class="flex justify-between items-center">
+                  <span class="text-on-surface-variant">Face Landmark Match:</span>
+                  <span class="text-secondary font-bold" id="score-face">99.8%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-on-surface-variant">Voice Spectrum Match:</span>
+                  <span class="text-secondary font-bold" id="score-voice">99.4%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-on-surface-variant">Deepfake Anti-Spoof Risk:</span>
+                  <span class="text-secondary font-bold" id="score-deepfake">0.01% (SECURE)</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-secondary/10 border border-secondary/30 text-center font-mono text-xs text-secondary font-bold" id="liveness-status-box">
+            Status: Ready for Liveness Verification
+          </div>
+
+          <div class="flex gap-3">
+            <button onclick="goToKycStep(1)" class="w-1/3 py-3 rounded-xl bg-surface-container text-on-surface font-semibold text-xs border border-white/10">
+              Πίσω
+            </button>
+            <button onclick="runAiLivenessAnalysis()" class="w-2/3 py-3 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:opacity-90 transition-opacity">
+              ⚡ Εκτέλεση AI Liveness & Δημιουργία Entra UPN
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGE 3: MICROSOFT ENTRA ID & AZURE KEY VAULT PASSKEY PROVISIONING -->
+        <div id="kyc-stage-3" class="glass-card p-6 rounded-2xl space-y-6 glass-card-glow hidden">
+          <div class="flex items-center justify-between border-b border-white/5 pb-4">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-secondary text-2xl">vpn_key</span>
+              <div>
+                <h3 class="font-bold text-lg text-on-surface">3. Έκδοση FIDO2 Passkey & Entra Identity</h3>
+                <p class="text-xs text-on-surface-variant">Microsoft Entra ID UPN Provisioning & Azure Key Vault Storage</p>
+              </div>
+            </div>
+            <span class="text-xs font-mono px-2.5 py-1 rounded bg-secondary/10 text-secondary border border-secondary/30">FIDO2 Active</span>
+          </div>
+
+          <!-- Provisioning Terminal Stream -->
+          <div class="p-4 rounded-xl bg-surface-container-lowest border border-white/10 font-mono text-xs space-y-2">
+            <div class="flex items-center justify-between text-[10px] text-on-surface-variant border-b border-white/5 pb-2">
+              <span>AZURE PROVISIONING ENGINE LOGS</span>
+              <span class="text-secondary font-bold">COMPLETED 100%</span>
+            </div>
+            
+            <div class="space-y-1.5 text-on-surface text-[11px]" id="terminal-logs">
+              <p class="text-secondary">✔ [Azure AI] Document OCR & Liveness Verification Passed (Confidence: 99.8%)</p>
+              <p class="text-primary">✔ [Microsoft Entra ID] Creating User Principal Name: maria.kotsira@vaultpay.azure.net</p>
+              <p class="text-primary">✔ [WebAuthn] Generating Hardware-Bound FIDO2 Passkey Pair (Elliptic Curve P-256)</p>
+              <p class="text-secondary">✔ [Azure Key Vault] Storing Public Key in Vault kv-vaultpay-prod-01 [OK]</p>
+              <p class="text-secondary">✔ [Azure RBAC] Assigning Role 'Key Vault Secrets User' to App Identity [OK]</p>
+            </div>
+          </div>
+
+          <!-- Verified Identity Certificate Card -->
+          <div class="p-5 rounded-2xl bg-gradient-to-r from-primary/10 via-surface-container to-secondary/10 border border-primary/30 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-bold text-primary uppercase tracking-wider">Ψηφιακό Πιστοποιητικό VaultPay</span>
+              <span class="material-symbols-outlined text-secondary text-2xl">verified</span>
+            </div>
+            
+            <div class="font-mono text-xs space-y-1">
+              <p class="text-on-surface-variant">User Principal Name (Entra ID):</p>
+              <p class="font-bold text-on-surface text-sm">maria.kotsira@vaultpay.azure.net</p>
+              <p class="text-on-surface-variant pt-1">Key Vault Public Key Identifier:</p>
+              <p class="font-mono text-[10px] text-primary break-all">https://kv-vaultpay-prod-01.vault.azure.net/keys/Passkey-MariaK-902834</p>
+            </div>
+          </div>
+
+          <button onclick="finishOnboarding()" class="w-full py-4 rounded-xl bg-secondary text-on-secondary font-bold text-sm shadow-[0_0_20px_rgba(125,255,162,0.4)] hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <span>🎉 Ολοκλήρωση Onboarding & Είσοδος στο Hub / Dashboard</span>
+            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. PASSWORDLESS LOGIN PAGE -->
+    <section id="view-login" class="view-section pt-4">
+      <div class="max-w-md mx-auto text-center space-y-6 py-6 glass-card p-8 rounded-2xl relative">
+        <div class="space-y-2">
+          <span class="px-3 py-1 rounded-full bg-secondary/10 text-secondary font-mono text-xs font-bold border border-secondary/20">Passwordless FIDO2 Login</span>
+          <h2 class="text-2xl font-bold text-on-surface">Είσοδος σε 1 δευτερόλεπτο</h2>
+          <p class="text-xs text-on-surface-variant">Σύνδεση με fingerprint / Face ID χωρίς κωδικό μέσω Entra ID & Key Vault Signature</p>
+        </div>
+
+        <!-- Conditional Access Traveler Simulator Badge -->
+        <div class="p-3 rounded-xl bg-surface-container border border-white/10 text-left font-mono text-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-on-surface-variant">Real-Time Conditional Access:</span>
+            <span class="text-xs font-bold text-secondary px-2 py-0.5 rounded bg-secondary/10" id="risk-badge">LOW RISK</span>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-outline">Location:</span>
+            <select id="location-select" onchange="testConditionalAccess()" class="bg-surface-container-high p-1 rounded text-on-surface outline-none border border-white/10">
+              <option value="Greece">Athens, Greece (Home IP)</option>
+              <option value="Tokyo">Tokyo, Japan (Traveler Risk Alert)</option>
+              <option value="NewYork">New York, USA (Unusual Location)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Biometric Interactive Scanner -->
+        <div class="relative w-36 h-36 mx-auto flex items-center justify-center cursor-pointer group" onclick="triggerBiometricLogin()">
+          <div class="absolute inset-0 rounded-full border border-primary/30 animate-[spin_4s_linear_infinite]"></div>
+          <div class="absolute inset-2 rounded-full border-t-2 border-r-2 border-primary animate-[spin_3s_ease-in-out_infinite]"></div>
+          <div class="w-24 h-24 bg-surface-container-highest rounded-full flex items-center justify-center shadow-xl group-hover:scale-105 transition-all border border-primary/20">
+            <span class="material-symbols-outlined text-5xl text-primary" id="bio-icon">fingerprint</span>
+          </div>
+        </div>
+        <p class="text-xs text-primary font-mono" id="bio-status">Πατήστε το αποτύπωμα για ταυτοποίηση FIDO2 Passkey</p>
+
+        <div class="space-y-2 pt-2 border-t border-white/5">
+          <button onclick="switchTab('dashboard')" class="w-full py-3 rounded-xl bg-surface-container-high text-on-surface text-xs font-semibold hover:bg-surface-container-highest transition-colors">
+            Είσοδος στο Hub / Dashboard
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. HUB / DASHBOARD PAGE -->
+    <section id="view-dashboard" class="view-section pt-2">
+      <!-- Balance Header -->
+      <div class="glass-card p-6 rounded-2xl space-y-6 relative overflow-hidden mb-6">
+        <div class="absolute -top-20 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs uppercase font-mono text-on-surface-variant tracking-wider">Συνολικό Υπόλοιπο (Encrypted Vault)</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20">Hybrid Private Cloud DB</span>
+          </div>
+          <button onclick="toggleBalance()" class="p-2 rounded-lg bg-surface-container hover:text-primary transition-colors text-on-surface">
+            <span class="material-symbols-outlined text-xl" id="eye-icon">visibility_off</span>
+          </button>
+        </div>
+
+        <div class="flex items-baseline gap-3">
+          <span class="text-4xl sm:text-5xl font-extrabold tracking-tight text-on-surface font-mono" id="balance-value">€24.590,00</span>
+          <span class="text-xs px-2 py-1 rounded bg-secondary/10 text-secondary font-mono font-semibold">+4.8% αυτόν το μήνα</span>
+        </div>
+
+        <!-- Multi-Wallets Horizontal Cards -->
+        <div>
+          <h3 class="text-sm font-semibold text-on-surface mb-3">Πορτοφόλια (Multi-Currency)</h3>
+          <div class="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+            <!-- EUR Wallet -->
+            <div class="shrink-0 w-64 glass-card p-4 rounded-xl space-y-4 border-l-4 border-primary">
+              <div class="flex justify-between items-center">
+                <span class="px-2.5 py-1 rounded-full bg-primary/20 text-primary font-mono font-bold text-xs">EUR €</span>
+                <span class="text-xs text-on-surface-variant font-medium">Κύριος Λογαριασμός</span>
+              </div>
+              <div>
+                <p class="text-xs text-on-surface-variant">Διαθέσιμο</p>
+                <p class="text-2xl font-bold font-mono text-on-surface balance-item">€18.240,50</p>
+              </div>
+            </div>
+
+            <!-- USD Wallet -->
+            <div class="shrink-0 w-64 glass-card p-4 rounded-xl space-y-4 border-l-4 border-secondary">
+              <div class="flex justify-between items-center">
+                <span class="px-2.5 py-1 rounded-full bg-secondary/20 text-secondary font-mono font-bold text-xs">USD $</span>
+                <span class="text-xs text-on-surface-variant font-medium">Επενδύσεις</span>
+              </div>
+              <div>
+                <p class="text-xs text-on-surface-variant">Διαθέσιμο</p>
+                <p class="text-2xl font-bold font-mono text-on-surface balance-item">$5.120,00</p>
+              </div>
+            </div>
+
+            <!-- BTC Wallet -->
+            <div class="shrink-0 w-64 glass-card p-4 rounded-xl space-y-4 border-l-4 border-[#F7931A]">
+              <div class="flex justify-between items-center">
+                <span class="px-2.5 py-1 rounded-full bg-[#F7931A]/20 text-[#F7931A] font-mono font-bold text-xs">BTC ₿</span>
+                <span class="text-xs text-secondary font-mono font-semibold">+2.4%</span>
+              </div>
+              <div>
+                <p class="text-xs text-on-surface-variant">Crypto Vault</p>
+                <p class="text-2xl font-bold font-mono text-on-surface balance-item">0.042 BTC</p>
+                <p class="text-xs text-on-surface-variant font-mono">≈ €1.229,50</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Revolut Actions -->
+        <div class="grid grid-cols-4 gap-3 pt-2">
+          <button onclick="switchTab('transfers')" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all group">
+            <div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">send</span>
+            </div>
+            <span class="text-xs font-medium text-on-surface">Αποστολή</span>
+          </button>
+          <button onclick="switchTab('transfers')" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all group">
+            <div class="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">swap_horiz</span>
+            </div>
+            <span class="text-xs font-medium text-on-surface">FX Exchange</span>
+          </button>
+          <button onclick="switchTab('cards')" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all group">
+            <div class="w-10 h-10 rounded-full bg-tertiary-container/20 text-tertiary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">credit_card</span>
+            </div>
+            <span class="text-xs font-medium text-on-surface">Κάρτες</span>
+          </button>
+          <button onclick="switchTab('azure')" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all group">
+            <div class="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined">key</span>
+            </div>
+            <span class="text-xs font-medium text-primary font-bold">Key Vault</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TRANSFER & EXCHANGE PAGE -->
+    <section id="view-transfers" class="view-section pt-4">
+      <div class="max-w-xl mx-auto space-y-6">
+        <div class="text-center space-y-2">
+          <span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-mono text-xs font-bold border border-primary/20">FIDO2 Passkey Crypto Signed Transfers</span>
+          <h2 class="text-2xl font-bold text-on-surface">Μετατροπές & Αποστολή</h2>
+          <p class="text-xs text-on-surface-variant">Άμεση μετατροπή συνάλλαγματος με πραγματική ισοτιμία & ψηφιακή υπογραφή Passkey</p>
+        </div>
+
+        <!-- Converter Card -->
+        <div class="glass-card p-6 rounded-2xl space-y-4">
+          <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider font-mono">Μετατροπέας FX</h3>
+
+          <div class="space-y-3">
+            <div class="p-4 rounded-xl bg-surface-container flex items-center justify-between border border-white/5">
+              <div>
+                <label class="text-[10px] font-mono uppercase text-on-surface-variant">Από (EUR)</label>
+                <input type="number" id="fx-from" value="1500" oninput="calculateFx()" class="w-full bg-transparent text-2xl font-bold font-mono text-on-surface outline-none"/>
+              </div>
+              <span class="px-3 py-1.5 rounded-full bg-primary/20 text-primary font-bold text-xs font-mono">EUR €</span>
+            </div>
+
+            <div class="flex justify-center -my-2">
+              <button onclick="swapFx()" class="w-10 h-10 rounded-full bg-surface-container-highest border border-primary/30 flex items-center justify-center text-primary hover:scale-110 transition-transform shadow-lg">
+                <span class="material-symbols-outlined">swap_vert</span>
+              </button>
+            </div>
+
+            <div class="p-4 rounded-xl bg-surface-container flex items-center justify-between border border-white/5">
+              <div>
+                <label class="text-[10px] font-mono uppercase text-on-surface-variant">Προς (USD)</label>
+                <input type="text" id="fx-to" value="1.635,45" readonly class="w-full bg-transparent text-2xl font-bold font-mono text-secondary outline-none"/>
+              </div>
+              <span class="px-3 py-1.5 rounded-full bg-secondary/20 text-secondary font-bold text-xs font-mono">USD $</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs font-mono text-on-surface-variant pt-2">
+            <span>Τρέχουσα Ισοτιμία:</span>
+            <span class="text-secondary font-semibold">1 EUR = 1.0903 USD 📈</span>
+          </div>
+
+          <button onclick="signAndExecuteTransfer()" class="w-full py-3.5 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:opacity-90 transition-opacity">
+            🔑 Υπογραφή με Passkey & Εκτέλεση Μετατροπής
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. CARDS MANAGEMENT PAGE -->
+    <section id="view-cards" class="view-section pt-4">
+      <div class="max-w-xl mx-auto space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-mono text-xs font-bold border border-primary/20">Disposable Virtual Cards</span>
+            <h2 class="text-2xl font-bold text-on-surface mt-1">Διαχείριση Καρτών</h2>
+            <p class="text-xs text-on-surface-variant">Δυναμική κρυπτογράφηση AES/RSA με κλειδιά στο Azure Key Vault</p>
+          </div>
+          <button onclick="alert('Δημιουργία νέας disposable εικονικής κάρτας!')" class="px-4 py-2 rounded-xl bg-primary text-on-primary font-bold text-xs flex items-center gap-1">
+            <span class="material-symbols-outlined text-base">add</span> Νέα Κάρτα
+          </button>
+        </div>
+
+        <!-- Cyberpunk Metal Disposable Virtual Card -->
+        <div class="relative aspect-[1.586/1] w-full rounded-2xl p-6 flex flex-col justify-between overflow-hidden shadow-2xl border border-primary/30 bg-gradient-to-br from-surface-container-high via-surface-container to-surface-container-lowest">
+          <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-primary/20 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div class="flex items-start justify-between relative z-10">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-2xl">contactless</span>
+              <span class="text-xs font-mono font-bold tracking-widest text-primary uppercase">Disposable Virtual</span>
+            </div>
+            <span class="text-xs font-mono px-2 py-1 rounded bg-secondary/10 text-secondary border border-secondary/30">AES/RSA ENCRYPTED</span>
+          </div>
+
+          <div class="space-y-2 relative z-10">
+            <p class="text-xs font-mono text-on-surface-variant uppercase tracking-wider">Αριθμός Κάρτας (Key Vault Protected)</p>
+            <div class="flex items-center gap-4">
+              <span class="text-xl sm:text-2xl font-bold font-mono tracking-widest text-on-surface" id="card-num">•••• •••• •••• 4921</span>
+              <button onclick="revealCardKeyVault()" class="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono font-semibold hover:bg-primary/20 transition-colors">
+                Show Card Details
+              </button>
+            </div>
+            <div class="flex gap-6 text-xs font-mono text-on-surface-variant">
+              <span>EXP: <strong id="card-exp">••/••</strong></span>
+              <span>CVV: <strong class="text-on-surface" id="card-cvv">•••</strong></span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-end relative z-10">
+            <span class="text-xs font-semibold tracking-wide uppercase text-on-surface">DISPOSABLE CARD #0928</span>
+            <span class="material-symbols-outlined text-3xl text-on-surface-variant opacity-70">credit_card</span>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-error">ac_unit</span>
+              <div>
+                <h4 class="text-xs font-bold text-on-surface">Freeze Card</h4>
+                <p class="text-[10px] text-on-surface-variant">Άμεση φραγή</p>
+              </div>
+            </div>
+            <input type="checkbox" class="toggle accent-primary w-5 h-5 cursor-pointer"/>
+          </div>
+
+          <div class="glass-card p-4 rounded-xl flex items-center justify-between cursor-pointer" onclick="alert('Προβολή PIN μέσω Key Vault Auth')">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-primary">lock</span>
+              <div>
+                <h4 class="text-xs font-bold text-on-surface">Προβολή PIN</h4>
+                <p class="text-[10px] text-on-surface-variant">Key Vault Verification</p>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-sm text-outline">chevron_right</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. ADMIN SECURITY PORTAL PAGE -->
+    <section id="view-admin" class="view-section pt-4">
+      <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span class="px-3 py-1 rounded-full bg-secondary/10 text-secondary font-mono text-xs font-bold border border-secondary/20">Entra ID RBAC Role Access</span>
+            <h2 class="text-2xl font-bold text-on-surface mt-1">Admin Security Portal</h2>
+            <p class="text-xs text-on-surface-variant">Πύλη εσωτερικού ελέγχου για τα μέλη της τράπεζας με βάση το ρόλο τους στο Entra ID</p>
+          </div>
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/30 text-secondary text-xs font-mono font-bold">
+            <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span> Role: Key Vault Security Auditor
+          </span>
+        </div>
+
+        <div class="glass-card rounded-2xl overflow-hidden divide-y divide-white/5">
+          <div class="p-4 bg-surface-container-high/50 flex justify-between items-center">
+            <span class="text-xs font-mono font-bold uppercase tracking-wider text-primary">Live SIEM & Entra Audit Logs Stream</span>
+            <button onclick="refreshLogs()" class="text-xs text-on-surface-variant hover:text-primary flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">refresh</span> Ανανέωση
+            </button>
+          </div>
+
+          <div class="divide-y divide-white/5 text-xs font-mono" id="audit-logs-container">
+            <!-- Logs injected via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. AZURE KEY VAULT & TECHNICAL SPECIFICATION REPORT PAGE -->
+    <section id="view-azure" class="view-section pt-4">
+      <div class="space-y-8">
+        
+        <!-- Header Banner -->
+        <div class="glass-card p-6 sm:p-8 rounded-2xl relative overflow-hidden border-l-8 border-primary">
+          <div class="absolute -right-10 -top-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+            <div class="space-y-2">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-mono font-bold">
+                <span class="material-symbols-outlined text-sm">security</span> Revolut Model Architecture & Azure Key Vault Specs
+              </div>
+              <h2 class="text-3xl font-extrabold text-on-surface tracking-tight">Τεχνική Αναφορά PDF & Live Console</h2>
+              <p class="text-xs text-on-surface-variant max-w-2xl">
+                Αναλυτικές προδιαγραφές ασφαλείας, βήματα παραμετροποίησης Azure CLI & ζωντανή εξομοίωση REST API επικοινωνίας με το Key Vault.
+              </p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+              <a href="/api/download-report" target="_blank" class="px-5 py-3 rounded-xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:scale-105 transition-all">
+                <span class="material-symbols-outlined">download</span>
+                Κατέβασμα PDF Αναφοράς
+              </a>
+              <a href="/api/view-pdf" target="_blank" class="px-5 py-3 rounded-xl bg-surface-container-high border border-white/10 text-on-surface font-bold text-xs flex items-center justify-center gap-2 hover:bg-surface-bright transition-all">
+                <span class="material-symbols-outlined">picture_as_pdf</span>
+                Προβολή PDF στο Browser
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Key Vault Interactive Manager -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Key Vault Secret Lookup & Set -->
+          <div class="glass-card p-6 rounded-2xl space-y-6">
+            <div class="flex items-center justify-between border-b border-white/5 pb-4">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-2xl">vpn_key</span>
+                <h3 class="font-bold text-lg text-on-surface">Secret & Key Operations</h3>
+              </div>
+              <span class="text-xs font-mono px-2.5 py-1 rounded bg-secondary/10 text-secondary border border-secondary/30">Managed Identity Auth</span>
+            </div>
+
+            <!-- Get Secret Form -->
+            <div class="space-y-3">
+              <label class="text-xs font-mono text-on-surface-variant uppercase">Ανάκτηση Μυστικού (Get Secret)</label>
+              <div class="flex gap-2">
+                <select id="secret-select" class="flex-grow bg-surface-container p-3 rounded-xl border border-white/10 text-xs font-mono text-on-surface outline-none focus:border-primary">
+                  <option value="Visa-Mastercard-Partner-API-Key">Visa-Mastercard-Partner-API-Key</option>
+                  <option value="Crypto-Exchange-Liquidity-Secret">Crypto-Exchange-Liquidity-Secret</option>
+                  <option value="CardEncryptionKey-AES256-RSA">CardEncryptionKey-AES256-RSA</option>
+                  <option value="Entra-ID-FIDO2-Passkey-PubKey-User1">Entra-ID-FIDO2-Passkey-PubKey-User1</option>
+                </select>
+                <button onclick="fetchSecret()" class="px-4 py-3 bg-primary text-on-primary font-bold text-xs rounded-xl hover:opacity-90 transition-opacity">
+                  Fetch
+                </button>
+              </div>
+              
+              <!-- Result Display -->
+              <div class="p-4 rounded-xl bg-surface-container-lowest border border-white/5 font-mono text-xs space-y-2">
+                <p class="text-on-surface-variant text-[10px] uppercase">Response Output:</p>
+                <pre id="secret-output" class="text-primary overflow-x-auto whitespace-pre-wrap">Πατήστε Fetch για ανάκτηση...</pre>
+              </div>
+            </div>
+
+            <!-- Add Secret Form -->
+            <div class="space-y-3 pt-4 border-t border-white/5">
+              <label class="text-xs font-mono text-on-surface-variant uppercase">Προσθήκη / Ενημέρωση Μυστικού (Set Secret)</label>
+              <div class="space-y-2">
+                <input type="text" id="new-secret-name" placeholder="Όνομα Μυστικού (π.χ. Visa-Partner-Key)" class="w-full bg-surface-container p-3 rounded-xl border border-white/10 text-xs font-mono text-on-surface outline-none focus:border-primary"/>
+                <input type="text" id="new-secret-val" placeholder="Τιμή Μυστικού" class="w-full bg-surface-container p-3 rounded-xl border border-white/10 text-xs font-mono text-on-surface outline-none focus:border-primary"/>
+                <button onclick="saveSecret()" class="w-full py-3 bg-secondary text-on-secondary font-bold text-xs rounded-xl hover:opacity-90 transition-opacity">
+                  Αποθήκευση στο Azure Key Vault
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary Specifications Preview -->
+          <div class="glass-card p-6 rounded-2xl space-y-6">
+            <div class="flex items-center gap-2 border-b border-white/5 pb-4">
+              <span class="material-symbols-outlined text-secondary text-2xl">verified</span>
+              <h3 class="font-bold text-lg text-on-surface">Περίληψη Revolut Αρχιτεκτονικής PDF</h3>
+            </div>
+
+            <div class="space-y-4 text-xs">
+              <div class="p-3.5 rounded-xl bg-surface-container space-y-1 border border-white/5">
+                <h4 class="font-bold text-primary font-mono">1. AI KYC Onboarding & Entra ID</h4>
+                <p class="text-on-surface-variant">Liveness detection (πρόσωπο/φωνή) για αποτροπή deepfakes. Δημιουργία Entra UPN & FIDO2 Passkey binding στο Key Vault.</p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-surface-container space-y-1 border border-white/5">
+                <h4 class="font-bold text-secondary font-mono">2. Real-Time Conditional Access</h4>
+                <p class="text-on-surface-variant">Αξιολόγηση ρίσκου ταξιδιωτών. Αίτημα βιομετρικής επιβεβαίωσης Passkey σε ασυνήθιστες τοποθεσίες.</p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-surface-container space-y-1 border border-white/5">
+                <h4 class="font-bold text-tertiary font-mono">3. Card Encryption & Key Vault Secrets</h4>
+                <p class="text-on-surface-variant">Προστασία Visa/Crypto API Keys. Στιγμιαία αποκρυπτογράφηση AES/RSA στο "Show Card Details".</p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-surface-container space-y-1 border border-white/5">
+                <h4 class="font-bold text-amber-400 font-mono">4. Hybrid Cloud Regulatory Compliance</h4>
+                <p class="text-on-surface-variant">Public Cloud για UI/ιστορικό & ταχύτητα. Private Cloud για Core DB υπολοίπων & KYC για συμμόρφωση.</p>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <a href="/api/download-report" target="_blank" class="w-full py-3 rounded-xl bg-surface-container-high border border-primary/40 text-primary font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/10 transition-colors">
+                <span class="material-symbols-outlined text-base">file_download</span>
+                Κατέβαστε την Πλήρη Αναφορά (VaultPay_Technical_Specification_Report.pdf)
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR (MOBILE & TABLET) -->
+  <div class="fixed bottom-0 left-0 w-full z-50 glass-header border-t border-white/10 md:hidden px-2 py-2 flex items-center justify-around">
+    <button onclick="switchTab('dashboard')" class="mobile-nav-btn flex flex-col items-center gap-1 text-on-surface-variant" data-target="dashboard">
+      <span class="material-symbols-outlined text-xl">dashboard</span>
+      <span class="text-[9px] font-medium">Dashboard</span>
+    </button>
+    <button onclick="switchTab('kyc')" class="mobile-nav-btn flex flex-col items-center gap-1 text-primary font-bold" data-target="kyc">
+      <span class="material-symbols-outlined text-xl">face</span>
+      <span class="text-[9px] font-bold">AI KYC</span>
+    </button>
+    <button onclick="switchTab('cards')" class="mobile-nav-btn flex flex-col items-center gap-1 text-on-surface-variant" data-target="cards">
+      <span class="material-symbols-outlined text-xl">credit_card</span>
+      <span class="text-[9px] font-medium">Κάρτες</span>
+    </button>
+    <button onclick="switchTab('transfers')" class="mobile-nav-btn flex flex-col items-center gap-1 text-on-surface-variant" data-target="transfers">
+      <span class="material-symbols-outlined text-xl">swap_horiz</span>
+      <span class="text-[9px] font-medium">Transfers</span>
+    </button>
+    <button onclick="switchTab('azure')" class="mobile-nav-btn flex flex-col items-center gap-1 text-primary font-bold" data-target="azure">
+      <span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+      <span class="text-[9px] font-bold">PDF Specs</span>
+    </button>
+  </div>
+
+  <!-- JAVASCRIPT APP CONTROLLER -->
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      const activeSection = document.getElementById('view-' + tabId);
+      if (activeSection) {
+        activeSection.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Update Desktop Nav
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-target') === tabId) {
+          btn.classList.add('bg-primary', 'text-on-primary', 'font-semibold');
+          btn.classList.remove('hover:text-primary');
+        } else {
+          btn.classList.remove('bg-primary', 'text-on-primary', 'font-semibold');
+          btn.classList.add('hover:text-primary');
+        }
+      });
+
+      // Update Mobile Nav
+      document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+        if (btn.getAttribute('data-target') === tabId) {
+          btn.classList.add('text-primary');
+          btn.classList.remove('text-on-surface-variant');
+        } else {
+          btn.classList.remove('text-primary');
+          btn.classList.add('text-on-surface-variant');
+        }
+      });
+    }
+
+    // AI KYC Stepper Logic
+    function goToKycStep(stepNum) {
+      document.getElementById('kyc-stage-1').classList.add('hidden');
+      document.getElementById('kyc-stage-2').classList.add('hidden');
+      document.getElementById('kyc-stage-3').classList.add('hidden');
+
+      document.getElementById('kyc-stage-' + stepNum).classList.remove('hidden');
+
+      const progressBar = document.getElementById('step-progress-bar');
+      const progressText = document.getElementById('step-progress-text');
+      
+      const tab1 = document.getElementById('step-tab-1');
+      const tab2 = document.getElementById('step-tab-2');
+      const tab3 = document.getElementById('step-tab-3');
+
+      [tab1, tab2, tab3].forEach(tab => {
+        tab.className = "p-2 rounded-xl bg-surface-container text-on-surface-variant font-mono text-xs font-medium transition-all flex items-center justify-center gap-1.5";
+      });
+
+      if (stepNum === 1) {
+        progressBar.style.width = '33.33%';
+        progressText.textContent = 'Βήμα 1 από 3: Σάρωση Εγγράφου';
+        tab1.className = "p-2 rounded-xl bg-primary/20 text-primary border border-primary/40 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5";
+      } else if (stepNum === 2) {
+        progressBar.style.width = '66.66%';
+        progressText.textContent = 'Βήμα 2 από 3: AI Liveness (Πρόσωπο & Φωνή)';
+        tab2.className = "p-2 rounded-xl bg-primary/20 text-primary border border-primary/40 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5";
+      } else if (stepNum === 3) {
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Βήμα 3 από 3: Entra UPN & Key Vault Passkey';
+        tab3.className = "p-2 rounded-xl bg-secondary/20 text-secondary border border-secondary/40 font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5";
+      }
+    }
+
+    function completeKycStage1() {
+      goToKycStep(2);
+    }
+
+    function runAiLivenessAnalysis() {
+      const box = document.getElementById('liveness-status-box');
+      const icon = document.getElementById('liveness-face-icon');
+      
+      box.innerHTML = '<span class="text-primary animate-pulse">⏳ Ανάλυση Βιομετρικών Προσώπου (Mesh Landmarks) & Φωνής σε εξέλιξη...</span>';
+      
+      setTimeout(() => {
+        box.className = 'p-3.5 rounded-xl bg-secondary/15 border border-secondary/40 text-center font-mono text-xs text-secondary font-bold';
+        box.innerHTML = '✅ Liveness Verified! Azure AI Anti-Deepfake Score: 99.8% (SECURE)';
+        icon.className = 'material-symbols-outlined text-7xl text-secondary animate-bounce';
+        
+        setTimeout(() => {
+          goToKycStep(3);
+        }, 1200);
+      }, 1500);
+    }
+
+    function finishOnboarding() {
+      switchTab('dashboard');
+    }
+
+    let isHidden = false;
+    function toggleBalance() {
+      const valEl = document.getElementById('balance-value');
+      const eyeIcon = document.getElementById('eye-icon');
+      const items = document.querySelectorAll('.balance-item');
+      
+      if (!isHidden) {
+        valEl.textContent = '••••••••';
+        eyeIcon.textContent = 'visibility';
+        items.forEach(el => el.dataset.old = el.textContent);
+        items.forEach(el => el.textContent = '••••••');
+        isHidden = true;
+      } else {
+        valEl.textContent = '€24.590,00';
+        eyeIcon.textContent = 'visibility_off';
+        items.forEach(el => el.textContent = el.dataset.old || '€18.240,50');
+        isHidden = false;
+      }
+    }
+
+    async function testConditionalAccess() {
+      const location = document.getElementById('location-select').value;
+      const riskBadge = document.getElementById('risk-badge');
+      const bioStatus = document.getElementById('bio-status');
+
+      try {
+        const res = await fetch('/api/auth/conditional-access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location, deviceCompliant: true })
+        });
+        const data = await res.json();
+        
+        if (data.requirePasskeyChallenge) {
+          riskBadge.textContent = 'RISK: UNUSUAL TRAVELER LOCATION';
+          riskBadge.className = 'text-xs font-bold text-error px-2 py-0.5 rounded bg-error/10 border border-error/30 animate-pulse';
+          bioStatus.textContent = '🚨 Απαιτείται FIDO2 Passkey signature επαλήθευση λόγω ασυνήθιστης τοποθεσίας!';
+        } else {
+          riskBadge.textContent = 'LOW RISK';
+          riskBadge.className = 'text-xs font-bold text-secondary px-2 py-0.5 rounded bg-secondary/10';
+          bioStatus.textContent = 'Πατήστε το αποτύπωμα για ταυτοποίηση FIDO2 Passkey';
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function triggerBiometricLogin() {
+      const status = document.getElementById('bio-status');
+      const icon = document.getElementById('bio-icon');
+      status.textContent = '⚡ Επαλήθευση FIDO2 Passkey Signature vs Azure Key Vault...';
+      status.classList.add('animate-pulse');
+      
+      setTimeout(() => {
+        status.textContent = '✅ Passkey Validated! Είσοδος στο Hub...';
+        icon.textContent = 'check_circle';
+        icon.classList.add('text-secondary');
+        setTimeout(() => switchTab('dashboard'), 800);
+      }, 1000);
+    }
+
+    async function revealCardKeyVault() {
+      const cardNum = document.getElementById('card-num');
+      const cardExp = document.getElementById('card-exp');
+      const cardCvv = document.getElementById('card-cvv');
+
+      if (cardNum.textContent.includes('••••')) {
+        cardNum.textContent = '⏳ Key Vault Decrypting...';
+        try {
+          const res = await fetch('/api/cards/decrypt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cardId: '4921' })
+          });
+          const data = await res.json();
+          cardNum.textContent = data.pan;
+          cardExp.textContent = data.exp;
+          cardCvv.textContent = data.cvv;
+        } catch (e) {
+          cardNum.textContent = '4921 8023 9912 4921';
+          cardExp.textContent = '08/29';
+          cardCvv.textContent = '892';
+        }
+      } else {
+        cardNum.textContent = '•••• •••• •••• 4921';
+        cardExp.textContent = '••/••';
+        cardCvv.textContent = '•••';
+      }
+    }
+
+    function signAndExecuteTransfer() {
+      alert('🔑 Η συναλλαγή υπεγράφη κρυπτογραφικά με το FIDO2 Passkey και εκτελέστηκε επιτυχώς!');
+    }
+
+    function calculateFx() {
+      const fromVal = parseFloat(document.getElementById('fx-from').value) || 0;
+      const toVal = (fromVal * 1.0903).toFixed(2);
+      document.getElementById('fx-to').value = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2 }).format(toVal);
+    }
+
+    function swapFx() {
+      const from = document.getElementById('fx-from');
+      const to = document.getElementById('fx-to');
+      const temp = from.value;
+      from.value = parseFloat(to.value.replace('.', '').replace(',', '.')) || 1000;
+      calculateFx();
+    }
+
+    async function fetchSecret() {
+      const name = document.getElementById('secret-select').value;
+      const output = document.getElementById('secret-output');
+      output.textContent = '⏳ Ανάκτηση από kv-vaultpay-prod-01 via Managed Identity...';
+      try {
+        const res = await fetch('/api/keyvault/secrets/' + name);
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Σφάλμα κατά την επικοινωνία: ' + err.message;
+      }
+    }
+
+    async function saveSecret() {
+      const name = document.getElementById('new-secret-name').value.trim();
+      const value = document.getElementById('new-secret-val').value.trim();
+      if (!name || !value) {
+        alert('Παρακαλώ συμπληρώστε όνομα και τιμή μυστικού.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/keyvault/secrets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, value })
+        });
+        const data = await res.json();
+        alert(data.message);
+        document.getElementById('new-secret-name').value = '';
+        document.getElementById('new-secret-val').value = '';
+        refreshLogs();
+      } catch (err) {
+        alert('Σφάλμα: ' + err.message);
+      }
+    }
+
+    async function refreshLogs() {
+      const container = document.getElementById('audit-logs-container');
+      container.innerHTML = '<div class="p-4 text-on-surface-variant">Φόρτωση logs...</div>';
+      try {
+        const res = await fetch('/api/keyvault/logs');
+        const data = await res.json();
+        container.innerHTML = data.logs.map(log => `
+          <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-white/5 transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined ${log.status.includes('SUCCESS') || log.status.includes('PASSED') ? 'text-secondary' : 'text-error'} text-lg">
+                ${log.status.includes('SUCCESS') || log.status.includes('PASSED') ? 'check_circle' : 'warning'}
+              </span>
+              <div>
+                <p class="font-semibold text-on-surface">${log.action} (${log.target})</p>
+                <p class="text-[10px] text-on-surface-variant">Caller: ${log.caller}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-[10px] text-on-surface-variant">
+              <span class="px-2 py-0.5 rounded bg-surface-container-high font-mono">${log.type}</span>
+              <span>${log.timestamp}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = '<div class="p-4 text-error">Αποτυχία φόρτωσης logs.</div>';
+      }
+    }
+
+    // Initialize logs on load
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshLogs();
+    });
+  </script>
+</body>
+</html>
