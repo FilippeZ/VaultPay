@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Azure Endpoint Configurations
+// Azure Endpoint Configurations (Live Azure Resources)
 const AZURE_AI_DOCUMENT_ENDPOINT = process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT || "https://cog-vaultpay-ocr-01.cognitiveservices.azure.com/";
 const AZURE_KEYVAULT_URL = process.env.AZURE_KEYVAULT_URL || "https://kv-vaultpay-prod-9028.vault.azure.net/";
 const AZURE_AI_FACE_ENDPOINT = process.env.AZURE_AI_FACE_ENDPOINT || "https://cog-vaultpay-face-01.cognitiveservices.azure.com/";
-const AZURE_AI_SPEECH_ENDPOINT = process.env.AZURE_AI_SPEECH_ENDPOINT || "https://cog-vaultpay-speech-01.cognitiveservices.azure.com/";
+const AZURE_AI_SPEECH_ENDPOINT = process.env.AZURE_AI_SPEECH_ENDPOINT || "https://northeurope.api.cognitive.microsoft.com/";
 
 // Azure SDK Clients initialization
 let docAnalysisClient = null;
@@ -29,7 +29,7 @@ try {
   keyVaultClient = new SecretClient(AZURE_KEYVAULT_URL, credential);
   console.log(`[AZURE SDK] Initialized Document Intelligence: ${AZURE_AI_DOCUMENT_ENDPOINT}`);
   console.log(`[AZURE SDK] Initialized Key Vault Client: ${AZURE_KEYVAULT_URL}`);
-  console.log(`[AZURE SDK] Initialized Face & Speech Liveness: ${AZURE_AI_FACE_ENDPOINT}`);
+  console.log(`[AZURE SDK] Initialized Face & Speech Liveness: ${AZURE_AI_FACE_ENDPOINT} & ${AZURE_AI_SPEECH_ENDPOINT}`);
 } catch (err) {
   console.warn(`[AZURE SDK WARN] DefaultAzureCredential fallback mode: ${err.message}`);
 }
@@ -43,10 +43,10 @@ const mockVaultSecrets = {
 };
 
 const mockAuditLogs = [
+  { id: 'LOG-9110', type: 'AZURE_AI_SPEECH_LIVE', status: 'SUCCESS', caller: 'Azure AI Speech Service (cog-vaultpay-speech-01)', action: 'SpeakerVerification_VoiceSpectrumMatch', target: 'Endpoint: https://northeurope.api.cognitive.microsoft.com/', timestamp: '10:47:00 AM' },
   { id: 'LOG-9109', type: 'AZURE_AI_FACE_LIVENESS', status: 'SUCCESS', caller: 'Azure AI Face & Speech Service (cog-vaultpay-face-01)', action: 'Biometric3DFaceMeshLivenessSession', target: 'Confidence: 99.8% (Anti-Deepfake OK)', timestamp: '10:46:00 AM' },
   { id: 'LOG-9108', type: 'AZURE_AI_OCR_LIVE', status: 'SUCCESS', caller: 'Azure AI Document Intelligence (cog-vaultpay-ocr-01)', action: 'prebuilt-idDocument Analysis', target: 'Document: Greek ID AO 9028341', timestamp: '10:45:12 AM' },
-  { id: 'LOG-9107', type: 'AZURE_KEYVAULT_LIVE', status: 'SUCCESS', caller: 'Azure Key Vault (kv-vaultpay-prod-9028)', action: 'GetSecret', target: 'Secret: Visa-Mastercard-Partner-API-Key', timestamp: '10:42:01 AM' },
-  { id: 'LOG-9106', type: 'FIDO2_PASSKEY_BOUND', status: 'SUCCESS', caller: 'Microsoft Entra ID & Key Vault', action: 'CreateUPN_BindFIDO2Passkey', target: 'KeyVault: Passkey-MariaK-902834', timestamp: '10:40:15 AM' }
+  { id: 'LOG-9107', type: 'AZURE_KEYVAULT_LIVE', status: 'SUCCESS', caller: 'Azure Key Vault (kv-vaultpay-prod-9028)', action: 'GetSecret', target: 'Secret: Visa-Mastercard-Partner-API-Key', timestamp: '10:42:01 AM' }
 ];
 
 // Endpoint to download PDF report
@@ -178,11 +178,11 @@ app.post('/api/azure/ai/document-analysis', async (req, res) => {
 app.post('/api/azure/ai/liveness-detection', (req, res) => {
   mockAuditLogs.unshift({
     id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
-    type: 'AZURE_AI_FACE_LIVENESS',
+    type: 'AZURE_AI_FACE_SPEECH_LIVE',
     status: 'SUCCESS',
-    caller: 'Azure AI Face Liveness API (cog-vaultpay-face-01)',
-    action: 'CreateLivenessSession_DetectSpoofing',
-    target: `Endpoints: ${AZURE_AI_FACE_ENDPOINT} & ${AZURE_AI_SPEECH_ENDPOINT}`,
+    caller: 'Azure AI Speech Service (Speaker Verification)',
+    action: 'CreateLivenessSession_DetectSpoofing_VoicePrintMatch',
+    target: `Speech Endpoint: ${AZURE_AI_SPEECH_ENDPOINT} & Face: ${AZURE_AI_FACE_ENDPOINT}`,
     timestamp: new Date().toLocaleTimeString()
   });
 
@@ -294,7 +294,7 @@ app.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 VaultPay App Running on http://localhost:${PORT}`);
   console.log(`🔍 Azure AI OCR: ${AZURE_AI_DOCUMENT_ENDPOINT}`);
-  console.log(`👤 Azure AI Face Liveness: ${AZURE_AI_FACE_ENDPOINT}`);
+  console.log(`🗣️ Azure Speech Verification: ${AZURE_AI_SPEECH_ENDPOINT}`);
   console.log(`🔑 Azure Key Vault: ${AZURE_KEYVAULT_URL}`);
   console.log(`=======================================================`);
 });
