@@ -17,11 +17,11 @@ const mockVaultSecrets = {
 };
 
 const mockAuditLogs = [
-  { id: 'LOG-9105', type: 'AI_KYC_LIVENESS', status: 'SUCCESS', caller: 'Azure AI Document Intelligence', action: 'FaceVoiceBiometricLivenessVerify', target: 'UPN: maria.k@vaultpay.azure.net', timestamp: '10:45:12 AM' },
-  { id: 'LOG-9104', type: 'FIDO2_PASSKEY_BOUND', status: 'SUCCESS', caller: 'Microsoft Entra ID', action: 'CreateUPN_BindFIDO2Passkey', target: 'KeyVault: Entra-ID-FIDO2-Passkey-PubKey-User1', timestamp: '10:45:15 AM' },
-  { id: 'LOG-9103', type: 'CONDITIONAL_ACCESS', status: 'CHALLENGE_PASSED', caller: 'Entra ID Risk Engine', action: 'TravelerSign`RiskCheck (IP: Tokyo, Japan)', target: 'Passkey Signature Verified vs Key Vault', timestamp: '10:40:02 AM' },
+  { id: 'LOG-9105', type: 'AI_KYC_LIVENESS', status: 'SUCCESS', caller: 'Azure AI Document Intelligence & Vision', action: 'FaceVoiceBiometricLivenessVerify', target: 'UPN: maria.k@vaultpay.azure.net', timestamp: '10:45:12 AM' },
+  { id: 'LOG-9104', type: 'FIDO2_PASSKEY_BOUND', status: 'SUCCESS', caller: 'Microsoft Entra ID & Key Vault', action: 'CreateUPN_BindFIDO2Passkey', target: 'KeyVault: Entra-ID-FIDO2-Passkey-PubKey-User1', timestamp: '10:45:15 AM' },
+  { id: 'LOG-9103', type: 'CONDITIONAL_ACCESS', status: 'CHALLENGE_PASSED', caller: 'Entra ID Risk Engine', action: 'TravelerSignRiskCheck (IP: Tokyo, Japan)', target: 'Passkey Signature Verified vs Key Vault', timestamp: '10:40:02 AM' },
   { id: 'LOG-9102', type: 'CARD_DECRYPTION', status: 'SUCCESS', caller: 'VaultPay Cards Module', action: 'InstantAESDecryption (Show Card Details)', target: 'Disposable Virtual Card ****4921', timestamp: '09:15:00 AM' },
-  { id: 'LOG-9101', type: 'HYBRID_CLOUD_SYNC', status: 'SUCCESS', caller: 'Private Cloud Core DB Vault', action: 'SyncBalanceAudit', target: 'Private Cloud KYC Vault Subnet', timestamp: '08:30:45 AM' }
+  { id: 'LOG-9103', type: 'HYBRID_CLOUD_SYNC', status: 'SUCCESS', caller: 'Private Cloud Core DB Vault', action: 'SyncBalanceAudit', target: 'Private Cloud KYC Vault Subnet', timestamp: '08:30:45 AM' }
 ];
 
 // Endpoint to download PDF report
@@ -50,7 +50,7 @@ app.get('/api/view-pdf', (req, res) => {
 
 // Key Vault Secrets API
 app.get('/api/keyvault/secrets', (req, res) => {
-  res.json({ vault: 'kv-vaultpay-prod-01.vault.azure.net', secrets: mockVaultSecrets });
+  res.json({ vault: 'kv-vaultpay-prod-9028.vault.azure.net', secrets: mockVaultSecrets });
 });
 
 app.get('/api/keyvault/secrets/:name', (req, res) => {
@@ -58,7 +58,7 @@ app.get('/api/keyvault/secrets/:name', (req, res) => {
   if (mockVaultSecrets[name]) {
     res.json({ name, ...mockVaultSecrets[name] });
   } else {
-    res.status(404).json({ error: `Secret '${name}' not found in Key Vault kv-vaultpay-prod-01` });
+    res.status(404).json({ error: `Secret '${name}' not found in Key Vault kv-vaultpay-prod-9028` });
   }
 });
 
@@ -84,9 +84,100 @@ app.post('/api/keyvault/secrets', (req, res) => {
   res.json({ success: true, message: `Secret '${name}' successfully stored in Azure Key Vault`, name });
 });
 
+// =====================================================================
+// AZURE AI KYC ONBOARDING BACKEND API ENDPOINTS
+// =====================================================================
+
+// 1. Azure AI Document Intelligence OCR Endpoint
+app.post('/api/azure/ai/document-analysis', (req, res) => {
+  const { documentType } = req.body;
+  const docName = documentType === 'passport' ? 'Διεθνές Διαβατήριο' : 'Ελληνική Ταυτότητα (National ID)';
+  
+  mockAuditLogs.unshift({
+    id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+    type: 'AZURE_AI_OCR',
+    status: 'SUCCESS',
+    caller: 'Azure AI Document Intelligence Model prebuilt-idDocument',
+    action: 'ExtractIdentityFields',
+    target: `Document: ${docName} (AO 9028341)`,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  res.json({
+    status: 'Succeeded',
+    confidenceScore: 0.998,
+    modelUsed: 'Azure AI Document Intelligence prebuilt-idDocument v3.1',
+    extractedData: {
+      fullName: 'Μαρία Κοτσίρα (MARIA KOTSIRA)',
+      documentNumber: 'AO 9028341',
+      dateOfBirth: '14/05/1996',
+      issueDate: '10/2022',
+      expiryDate: '10/2032',
+      issuingCountry: 'GR (Ελλάδα)',
+      mrzCode: 'IDGRCA09028341<<<<<<<<<<<<<<<9605142F3210105GRC<<<<<<<<<<<0'
+    }
+  });
+});
+
+// 2. Azure AI Vision & Machine Learning Liveness Detection Endpoint
+app.post('/api/azure/ai/liveness-detection', (req, res) => {
+  mockAuditLogs.unshift({
+    id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+    type: 'AZURE_AI_LIVENESS',
+    status: 'SUCCESS',
+    caller: 'Azure AI Vision & Speech ML Liveness Service',
+    action: 'BiometricMultiModalLivenessAnalysis',
+    target: 'Face Landmarks Mesh & Voice Frequency Spectrum',
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  res.json({
+    status: 'Verified',
+    livenessScore: 0.998,
+    faceLandmarkMatch: 0.998,
+    voiceSpectrumMatch: 0.994,
+    antiDeepfakeRisk: 0.0001,
+    spoofDetected: false,
+    aiRecommendation: 'APPROVE_ONBOARDING'
+  });
+});
+
+// 3. Microsoft Entra ID UPN Provisioning & Azure Key Vault FIDO2 Passkey Binding
+app.post('/api/azure/entra/create-upn-passkey', (req, res) => {
+  const { name, docId } = req.body;
+  const upn = 'maria.kotsira@vaultpay.azure.net';
+  const secretName = `Passkey-MariaK-${docId || '902834'}`;
+  const secretValue = 'pub_fido2_p256_hardware_bound_key_kv-vaultpay-prod-9028_092834';
+
+  mockVaultSecrets[secretName] = {
+    value: secretValue,
+    type: 'FIDO2 Passkey Public Key',
+    updated: new Date().toISOString()
+  };
+
+  mockAuditLogs.unshift({
+    id: `LOG-${Math.floor(1000 + Math.random() * 9000)}`,
+    type: 'ENTRA_KEYVAULT_BIND',
+    status: 'SUCCESS',
+    caller: 'Microsoft Entra ID & Key Vault SDK',
+    action: 'CreateUPN_StorePasskeyInKeyVault',
+    target: `UPN: ${upn} -> Vault: kv-vaultpay-prod-9028`,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  res.json({
+    success: true,
+    upn,
+    vaultUri: `https://kv-vaultpay-prod-9028.vault.azure.net/secrets/${secretName}`,
+    fido2KeyId: secretName,
+    azureRbacRole: 'Key Vault Secrets User',
+    message: `Account ${upn} successfully provisioned in Entra ID & FIDO2 Passkey saved in Azure Key Vault!`
+  });
+});
+
 // Real-Time Conditional Access Traveler Assessment API
 app.post('/api/auth/conditional-access', (req, res) => {
-  const { location, deviceCompliant } = req.body;
+  const { location } = req.body;
   const isTraveler = location && location !== 'Greece';
   
   mockAuditLogs.unshift({
