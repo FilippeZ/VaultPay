@@ -11,8 +11,10 @@
   "description": "",
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
+    "@azure/cognitiveservices-face": "^5.0.0",
     "@azure/identity": "^4.13.1",
     "@azure/keyvault-secrets": "^4.11.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "microsoft-cognitiveservices-speech-sdk": "^1.51.0"
   }
 }
